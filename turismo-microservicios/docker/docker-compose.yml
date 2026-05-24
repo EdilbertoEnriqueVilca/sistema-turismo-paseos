@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgresql:
+    image: postgres:16-alpine
+    container_name: turismo-postgresql
+    environment:
+      POSTGRES_DB: turismo_db
+      POSTGRES_USER: turismo_user
+      POSTGRES_PASSWORD: turismo_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - turismo-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U turismo_user -d turismo_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: turismo-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: turismo_user
+      RABBITMQ_DEFAULT_PASS: turismo_password
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    networks:
+      - turismo-network
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgresql_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  rabbitmq_logs:
+    driver: local
+
+networks:
+  turismo-network:
+    driver: bridge
